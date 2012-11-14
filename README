@@ -1,0 +1,43 @@
+stfuboot -- Bootloader for STM32 connectivity line devices
+==========================================================
+
+The stfuboot project aims to create an open-source replacement for a
+bootloader that is factory programmed into the System Memory of the
+connectivity line deivces
+
+This bootlader has been tested to at least partially work with the following microcontrollers:
+ - STM32F107
+
+The library is written based on example founf in
+libopencm3(https://github.com/libopencm3/libopencm3). The code tested
+to build with CodeSourcery toolchain
+
+Building
+--------
+In order to build the code the symlink to libopencm3 directory has to be created:
+
+ $ ln -s <path to libopencm3> libopencm3
+
+After that building should be as simple as:
+
+ $ make
+
+You may want to override the toolchain (e.g., arm-elf or arm-none-eabi):
+
+ $ PREFIX=arm-none-eabi make
+
+For a more verbose build you can use
+
+ $ make V=1
+
+Coding style and development guidelines
+---------------------------------------
+
+The code is written using the Linux kernel coding style, see
+http://www.kernel.org/doc/Documentation/CodingStyle for details.
+
+Please use the same style for any code contributions, thanks!
+
+
+
+
