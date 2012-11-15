@@ -34,11 +34,21 @@
 
 #include "uart.h"
 
+#define UART_BUFFER_SIZE 256
+
+struct uart_buffer{
+	unsigned char start;
+	unsigned char end;
+	unsigned char watermark;
+
+	char data[UART_BUFFER_SIZE];
+};
+
 #define UART_BUF_COUNT(b)        \
         (b->end >= b->start) ? (b->end - b->start) : \
         (UART_BUFFER_SIZE - b->start + b->end)
 
-int uart_buffer_push(volatile struct uart_buffer *buf, char c)
+static int uart_buffer_push(volatile struct uart_buffer *buf, char c)
 {
 	unsigned char count;
 	int ret = 0;
@@ -61,7 +71,7 @@ int uart_buffer_push(volatile struct uart_buffer *buf, char c)
 	return ret;
 }
 
-int uart_buffer_pop(volatile struct uart_buffer *buf, char *c)
+static int uart_buffer_pop(volatile struct uart_buffer *buf, char *c)
 {
 	int ret = 0;
 	if (buf != NULL && c != NULL) {
@@ -80,12 +90,12 @@ int uart_buffer_pop(volatile struct uart_buffer *buf, char *c)
 
 static volatile struct uart_buffer uart_tx;
 
-void uart_putchar(char c)
+void stfub_uart_putchar(char c)
 {
 	int n = 0;
 
 	if (c == '\n')
-		uart_putchar('\r');
+		stfub_uart_putchar('\r');
 	
 	if (usart_tx_interrupt_enabled(USART2)) {
 		while (uart_buffer_push(&uart_tx, c) < 0 && ++n < 1000);

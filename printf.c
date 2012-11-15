@@ -24,7 +24,7 @@
 */
 #include "uart.h"
 
-#define putchar(c) uart_putchar(c)
+#define putchar(c) stfub_uart_putchar(c)
 
 static void printchar(char **str, int c)
 {

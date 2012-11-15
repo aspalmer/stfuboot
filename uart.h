@@ -23,19 +23,7 @@
 #ifndef _UART_H_
 #define _UART_H_
 
-#define UART_BUFFER_SIZE 256
-
-struct uart_buffer{
-	unsigned char start;
-	unsigned char end;
-	unsigned char watermark;
-
-	char data[UART_BUFFER_SIZE];
-};
-
 void stfub_uart_init(void);
-int uart_buffer_push(volatile struct uart_buffer *buf, char c);
-int uart_buffer_pop(volatile struct uart_buffer *buf, char *c);
-void uart_putchar(char c);
+void stfub_uart_putchar(char c);
 
 #endif /* _UART_H_ */
