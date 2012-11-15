@@ -47,7 +47,7 @@ MAKEFLAGS += --no-print-directory
 endif
 
 # common objects
-OBJS += uart.o printf.o dfu.o main.o vectors.o
+OBJS += uart.o printf.o dfu.o main.o reset.o
 
 all: stfuboot.bin
 

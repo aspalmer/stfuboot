@@ -32,7 +32,7 @@
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/flash.h>
 #include <libopencm3/stm32/desig.h>
-#include <libopencm3/cm3/nvic.h>
+
 
 #include <libopencm3/usb/usbd.h>
 
@@ -271,13 +271,8 @@ void __printf(const char *format, ...);
 int main(void)
 {
 	stfub_clocks_init();
-
-	nvic_enable_irq(NVIC_USART2_IRQ);
-	nvic_set_priority(NVIC_USART2_IRQ, 3);
-
 	stfub_gpio_init();
-
-	uart_init();
+	stfub_uart_init();
 	
 	/* 
 	   TODO: For some reason the first character of this banner is

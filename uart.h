@@ -33,7 +33,7 @@ struct uart_buffer{
 	char data[UART_BUFFER_SIZE];
 };
 
-void uart_init(void);
+void stfub_uart_init(void);
 int uart_buffer_push(volatile struct uart_buffer *buf, char c);
 int uart_buffer_pop(volatile struct uart_buffer *buf, char *c);
 void uart_putchar(char c);

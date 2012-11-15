@@ -53,20 +53,6 @@ void ram_reset_handler(void)
 		asm volatile("nop");
 }
 
-extern volatile struct uart_buffer uart_tx;
-void usart2_isr(void)
-{
-	char c;
-	if ((USART_SR(USART2) & USART_SR_TXE)  != 0) {
-		if (uart_buffer_pop(&uart_tx, &c) == 0) {
-			usart_send(USART2, (uint16_t)c);
-		} else {
-			usart_disable_tx_interrupt(USART2);
-		}
-	}
-}
-
-
 void blocking_handler(void);
 void null_handler(void);
 

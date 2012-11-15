@@ -28,6 +28,7 @@
 #include <sys/times.h>
 #include <sys/unistd.h>
 
+#include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/f1/gpio.h>
 
@@ -36,22 +37,6 @@
 #define UART_BUF_COUNT(b)        \
         (b->end >= b->start) ? (b->end - b->start) : \
         (UART_BUFFER_SIZE - b->start + b->end)
-
-volatile struct uart_buffer uart_tx;
-
-void uart_init(void)
-{
-	memset((void *)&uart_tx,0,sizeof(uart_tx));
-
-	usart_set_baudrate(USART2, 115200);
-	usart_set_databits(USART2, 8);
-	usart_set_stopbits(USART2, USART_CR2_STOPBITS_1);
-	usart_set_parity(USART2, USART_PARITY_NONE);
-	usart_set_flow_control(USART2, USART_FLOWCONTROL_NONE);
-	usart_set_mode(USART2, USART_MODE_TX);
-	usart_enable(USART2);
-	usart_disable_tx_interrupt(USART2);
-}
 
 int uart_buffer_push(volatile struct uart_buffer *buf, char c)
 {
@@ -93,6 +78,8 @@ int uart_buffer_pop(volatile struct uart_buffer *buf, char *c)
 	return ret;
 }
 
+static volatile struct uart_buffer uart_tx;
+
 void uart_putchar(char c)
 {
 	int n = 0;
@@ -106,4 +93,33 @@ void uart_putchar(char c)
 		usart_enable_tx_interrupt(USART2);
 		usart_send(USART2, (uint16_t)c);
 	}
+}
+
+void usart2_isr(void)
+{
+	char c;
+	if ((USART_SR(USART2) & USART_SR_TXE)  != 0) {
+		if (uart_buffer_pop(&uart_tx, &c) == 0) {
+			usart_send(USART2, (uint16_t)c);
+		} else {
+			usart_disable_tx_interrupt(USART2);
+		}
+	}
+}
+
+void stfub_uart_init(void)
+{
+	memset((void *)&uart_tx,0,sizeof(uart_tx));
+
+	nvic_enable_irq(NVIC_USART2_IRQ);
+	nvic_set_priority(NVIC_USART2_IRQ, 3);
+
+	usart_set_baudrate(USART2, 115200);
+	usart_set_databits(USART2, 8);
+	usart_set_stopbits(USART2, USART_CR2_STOPBITS_1);
+	usart_set_parity(USART2, USART_PARITY_NONE);
+	usart_set_flow_control(USART2, USART_FLOWCONTROL_NONE);
+	usart_set_mode(USART2, USART_MODE_TX);
+	usart_enable(USART2);
+	usart_disable_tx_interrupt(USART2);
 }
