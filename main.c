@@ -219,6 +219,11 @@ static const struct dfu_device_ops usbdfu_dfu_ops = {
 
 static void stfub_clocks_init(void)
 {
+	/*
+	   TODO: For some reason the deivce would not be able to
+	   initialize PLL after if this FW is flashed using factory
+	   bootloader. Power-cycling the board will sole the issue.
+	 */
 	rcc_clock_setup_in_hsi_out_48mhz();
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_AFIOEN);
 
