@@ -41,13 +41,11 @@
 
 #define MIN(a, b) ((a)<(b) ? (a) : (b))
 
-
-
-
-
 static usbd_device *usbddev = NULL;
+static struct dfu_device *dfu = NULL;
 /* We need a special large control buffer for this device: */
 u8 usbd_control_buffer[2048];
+u8 dfu_data_buffer[2048];
 
 
 const struct usb_device_descriptor dev = {
@@ -240,32 +238,8 @@ static void stfub_gpio_init(void)
 	gpio_primary_remap(AFIO_MAPR_SWJ_CFG_FULL_SWJ, AFIO_MAPR_USART2_REMAP);
 }
 
-void __printf(const char *format, ...);
-
-int main(void)
+static void stfub_usb_init(void)
 {
-	struct dfu_device *dfu;
-
-	u8 *dfu_data_buffer = alloca(dfu_function.wTransferSize);
-
-	stfub_clocks_init();
-
-	nvic_enable_irq(NVIC_USART2_IRQ);
-	nvic_set_priority(NVIC_USART2_IRQ, 3);
-
-	stfub_gpio_init();
-
-	uart_init();
-	
-	/* 
-	   TODO: For some reason the first character of this banner is
-	   lost, this has to be investigated further
-	 */
-	__printf("=========================================\n");
-	__printf("= stfuboot -- Insert smart tagline here =\n");
-	__printf("=========================================\n");
-
-	
 	desig_get_unique_id_as_string(serial_number_string,
 				      sizeof(serial_number_string));
 
@@ -285,6 +259,31 @@ int main(void)
 				       USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
 				       USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 				       dfu_device_handle_control_request);
+}
+
+void __printf(const char *format, ...);
+
+int main(void)
+{
+	stfub_clocks_init();
+
+	nvic_enable_irq(NVIC_USART2_IRQ);
+	nvic_set_priority(NVIC_USART2_IRQ, 3);
+
+	stfub_gpio_init();
+
+	uart_init();
+	
+	/* 
+	   TODO: For some reason the first character of this banner is
+	   lost, this has to be investigated further
+	 */
+	__printf("=========================================\n");
+	__printf("= stfuboot -- Insert smart tagline here =\n");
+	__printf("=========================================\n");
+
+	stfub_usb_init();
+	
 	while (1) {
 		usbd_poll(usbddev);
 		dfu_device_tick(dfu);
