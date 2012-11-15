@@ -52,9 +52,11 @@ OBJS += uart.o printf.o dfu.o main.o vectors.o
 all: stfuboot.bin
 
 stfuboot.bin: stfuboot.elf
+	@printf "  OBJCOPY $(subst $(shell pwd)/,,$(@))\n"
 	$(Q)$(PREFIX)-objcopy -Obinary $< $@
 
 stfuboot.elf: $(OBJS)
+	@printf "  LD      $(subst $(shell pwd)/,,$(@))\n"
 	$(Q)$(CC) -o $@ $(LDFLAGS) $(OBJS) $(LIBS)
 
 %.o: %.c
