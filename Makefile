@@ -34,7 +34,7 @@ CFLAGS ?= -Os -g -Waddress -Warray-bounds -Wchar-subscripts -Wenum-compare 	\
 
 CFLAGS += -DSTM32F1 -Ilibopencm3/include
 
-LDFLAGS ?= -T bootloader.ld -Wl,--start-group -lc -lgcc -Wl,--end-group 	\
+LDFLAGS ?= -T bootloader.ld -Wl,--start-group -Wl,--end-group 	\
 	   -nostartfiles -Wl,--gc-sections -mthumb -mcpu=cortex-m3 -msoft-float
 
 LIBS = -Llibopencm3/lib -lopencm3_stm32f1
@@ -64,4 +64,7 @@ stfuboot.elf: $(OBJS)
 clean:
 	$(Q)rm -f *.o *.d ../*.o ../*.d
 
-.PHONY: clean
+bootstrap:
+	dfu-util -d 0483:df11 -a0 -i0 -s0x08000000 -D stfuboot.bin
+
+.PHONY: clean bootstrap
