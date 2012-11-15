@@ -219,6 +219,26 @@ static const struct dfu_device_ops usbdfu_dfu_ops = {
 	.all_data_in    = usbdfu_all_data_in,
 };
 
+static void stfub_clocks_init(void)
+{
+	rcc_clock_setup_in_hsi_out_48mhz();
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_AFIOEN);
+
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPDEN);
+	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USART2EN);
+
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	rcc_peripheral_enable_clock(&RCC_AHBENR,  RCC_AHBENR_OTGFSEN);
+}
+
+static void stfub_gpio_init(void)
+{
+	gpio_set_mode(GPIOD, GPIO_MODE_OUTPUT_50_MHZ,
+		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO5);
+	gpio_set(GPIOD, GPIO5);
+
+	gpio_primary_remap(AFIO_MAPR_SWJ_CFG_FULL_SWJ, AFIO_MAPR_USART2_REMAP);
+}
 
 void __printf(const char *format, ...);
 
@@ -228,20 +248,12 @@ int main(void)
 
 	u8 *dfu_data_buffer = alloca(dfu_function.wTransferSize);
 
-	rcc_clock_setup_in_hsi_out_48mhz();
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_AFIOEN);
-
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPDEN);
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USART2EN);
+	stfub_clocks_init();
 
 	nvic_enable_irq(NVIC_USART2_IRQ);
 	nvic_set_priority(NVIC_USART2_IRQ, 3);
 
-	gpio_set_mode(GPIOD, GPIO_MODE_OUTPUT_50_MHZ,
-		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO5);
-	gpio_set(GPIOD, GPIO5);
-
-	gpio_primary_remap( AFIO_MAPR_SWJ_CFG_FULL_SWJ, AFIO_MAPR_USART2_REMAP);
+	stfub_gpio_init();
 
 	uart_init();
 	
@@ -253,9 +265,7 @@ int main(void)
 	__printf("= stfuboot -- Insert smart tagline here =\n");
 	__printf("=========================================\n");
 
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
-	rcc_peripheral_enable_clock(&RCC_AHBENR,  RCC_AHBENR_OTGFSEN);
-
+	
 	desig_get_unique_id_as_string(serial_number_string,
 				      sizeof(serial_number_string));
 
