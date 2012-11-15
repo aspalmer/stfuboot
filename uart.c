@@ -43,10 +43,6 @@ void uart_init(void)
 {
 	memset((void *)&uart_tx,0,sizeof(uart_tx));
 
-#ifdef BOARD_DEV_KIT
-	gpio_primary_remap( AFIO_MAPR_SWJ_CFG_FULL_SWJ, AFIO_MAPR_USART2_REMAP);
-#endif
-
 	usart_set_baudrate(USART2, 115200);
 	usart_set_databits(USART2, 8);
 	usart_set_stopbits(USART2, USART_CR2_STOPBITS_1);

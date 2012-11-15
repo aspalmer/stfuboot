@@ -226,14 +226,6 @@ int main(void)
 {
 	struct dfu_device *dfu;
 
-	char *ptr = "Hello world!";
-	char *np = 0;
-	int i = 5;
-	unsigned int bs = sizeof(int)*8;
-	int mi;
-	char buf[80];
-
-
 	u8 *dfu_data_buffer = alloca(dfu_function.wTransferSize);
 
 	rcc_clock_setup_in_hsi_out_48mhz();
@@ -249,23 +241,17 @@ int main(void)
 		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO5);
 	gpio_set(GPIOD, GPIO5);
 
+	gpio_primary_remap( AFIO_MAPR_SWJ_CFG_FULL_SWJ, AFIO_MAPR_USART2_REMAP);
 
 	uart_init();
 	
-	/* uart_putchar('L'); */
-	/* uart_putchar('O'); */
-	/* uart_putchar('L'); */
-	/* uart_putchar('\n'); */
-
-	__printf("printf test\n");
-	__printf("%s is null pointer\n", np);
-	__printf("%d = 5\n", i);
-	__printf("%d = - max int\n", mi);
-	__printf("char %c = 'a'\n", 'a');
-	__printf("hex %x = ff\n", 0xff);
-	__printf("hex %02x = 00\n", 0);
-	__printf("signed %d = unsigned %u = hex %x\n", -3, -3, -3);
-	__printf("%d %s(s)%", 0, "message");
+	/* 
+	   TODO: For some reason the first character of this banner is
+	   lost, this has to be investigated further
+	 */
+	__printf("=========================================\n");
+	__printf("= stfuboot -- Insert smart tagline here =\n");
+	__printf("=========================================\n");
 
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
 	rcc_peripheral_enable_clock(&RCC_AHBENR,  RCC_AHBENR_OTGFSEN);
