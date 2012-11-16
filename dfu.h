@@ -26,6 +26,8 @@
 #include <libopencm3/usb/dfu.h>
 #include <libopencm3/usb/usbd.h>
 
+#include "printf.h"
+
 struct dfu_device;
 
 struct dfu_device_ops {
@@ -70,5 +72,7 @@ void dfu_device_init(struct dfu_device *dfu,
 		     void *context);
 
 struct dfu_device *dfu_device_get_dfu_device(void);
+
+void stfub_dfu_swith_altsetting(usbd_device *usbd_dev, u16 interface, u16 altsetting);
 
 #endif

@@ -377,3 +377,9 @@ int dfu_device_handle_control_request(usbd_device *udbddev, struct usb_setup_dat
 	dfu_device_set_state(dfu, STATE_DFU_ERROR);
 	return USBD_REQ_NOTSUPP;
 }
+
+
+void stfub_dfu_swith_altsetting(usbd_device *usbd_dev, u16 interface, u16 altsetting)
+{
+	stfub_printf("[%d] Switching to altsetting %d\n", interface, altsetting);
+}

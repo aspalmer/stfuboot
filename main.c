@@ -75,47 +75,52 @@ const struct usb_dfu_descriptor dfu_function = {
 	.bcdDFUVersion		= 0x0110,
 };
 
-const struct usb_interface_descriptor main_memory_interface_descr = {
-	.bLength		= USB_DT_INTERFACE_SIZE,
-	.bDescriptorType	= USB_DT_INTERFACE,
-	.bInterfaceNumber	= 0,
-	.bAlternateSetting	= 0,
-	.bNumEndpoints		= 0,
-	.bInterfaceClass	= 0xFE, /* Device Firmware Upgrade */
-	.bInterfaceSubClass	= 1,
-	.bInterfaceProtocol	= 2,
-	.iInterface		= 4,
-
-	.extra			= &dfu_function,
-	.extralen		= sizeof(dfu_function),
-};
-
-const struct usb_interface_descriptor system_memory_interface_descr = {
-	.bLength		= USB_DT_INTERFACE_SIZE,
-	.bDescriptorType	= USB_DT_INTERFACE,
-	.bInterfaceNumber	= 0,
-	.bAlternateSetting	= 0,
-	.bNumEndpoints		= 0,
-	.bInterfaceClass	= 0xFE, /* Device Firmware Upgrade */
-	.bInterfaceSubClass	= 1,
-	.bInterfaceProtocol	= 2,
-	.iInterface		= 5,
-
-	.extra			= &dfu_function,
-	.extralen		= sizeof(dfu_function),
-};
-
-const struct usb_interface main_memory_programming_ifaces[] = {
+const struct usb_interface_descriptor stfub_interface_descriptors[] ={
 	{
-		.num_altsetting = 1,
-		.altsetting	= &main_memory_interface_descr,
+		.bLength		= USB_DT_INTERFACE_SIZE,
+		.bDescriptorType	= USB_DT_INTERFACE,
+		.bInterfaceNumber	= 0,
+		.bAlternateSetting	= 0,
+		.bNumEndpoints		= 0,
+		.bInterfaceClass	= 0xFE, /* Device Firmware Upgrade */
+		.bInterfaceSubClass	= 1,
+		.bInterfaceProtocol	= 2,
+		.iInterface		= 4,
+		.extra			= &dfu_function,
+		.extralen		= sizeof(dfu_function),
+	},
+	{
+		.bLength		= USB_DT_INTERFACE_SIZE,
+		.bDescriptorType	= USB_DT_INTERFACE,
+		.bInterfaceNumber	= 0,
+		.bAlternateSetting	= 1,
+		.bNumEndpoints		= 0,
+		.bInterfaceClass	= 0xFE, /* Device Firmware Upgrade */
+		.bInterfaceSubClass	= 1,
+		.bInterfaceProtocol	= 2,
+		.iInterface		= 5,
+		.extra			= &dfu_function,
+		.extralen		= sizeof(dfu_function),
+	},
+	{
+		.bLength		= USB_DT_INTERFACE_SIZE,
+		.bDescriptorType	= USB_DT_INTERFACE,
+		.bInterfaceNumber	= 0,
+		.bAlternateSetting	= 2,
+		.bNumEndpoints		= 0,
+		.bInterfaceClass	= 0xFE, /* Device Firmware Upgrade */
+		.bInterfaceSubClass	= 1,
+		.bInterfaceProtocol	= 2,
+		.iInterface		= 6,
+		.extra			= &dfu_function,
+		.extralen		= sizeof(dfu_function),
 	},
 };
 
-const struct usb_interface system_memory_programming_ifaces[] = {
+struct usb_interface stfub_interfaces[] = {
 	{
-		.num_altsetting = 1,
-		.altsetting	= &system_memory_interface_descr,
+		.num_altsetting = 3,
+		.altsetting	= stfub_interface_descriptors,
 	},
 };
 
@@ -128,16 +133,19 @@ struct usb_config_descriptor config = {
 	.iConfiguration		= 0,
 	.bmAttributes		= 0xC0,
 	.bMaxPower		= 0x32,
+
+	.interface		= stfub_interfaces,
 };
 
 static char serial_number_string[30];
 static const char *usb_strings[] = {
 	"Innovative Converged Devices",
-	"Cantaloupe USB <-> CAN Bridge",
+	"Device with STFUBoot",
 	serial_number_string,
 	/* This string is used by ST Microelectronics' DfuSe utility. */
-	"[Main Memory]",
-	"[System Memory]"
+	"Main Memory [0x08000000 - 0x0803FFFF]",
+	"System Memory [0x1FFFB000 - 0x1FFFF7FF]",
+	"Option Bytes [0x1FFFF800 - 0x1FFFF80F]",
 };
 
 static int usbdfu_read_block(struct dfu_device *dfu, u16 block_no,
@@ -169,6 +177,7 @@ static int usbdfu_write_block(struct dfu_device *dfu, u16 block_no,
 	   cases. Someday it will have to be improved.
 	 */
 
+#if 0
 	int write_len, i;
 	const u8 *start_address  = (const u8 *)0x08000000;
 	const u8 *end_address    = (const u8 *)0x08040000;
@@ -203,7 +212,7 @@ static int usbdfu_write_block(struct dfu_device *dfu, u16 block_no,
 
 
 	block += write_len;
-
+#endif
 	return 0;
 }
 
@@ -249,9 +258,6 @@ static void stfub_usb_init(void)
 	desig_get_unique_id_as_string(serial_number_string,
 				      sizeof(serial_number_string));
 
-
-	config.interface = main_memory_programming_ifaces;
-
 	dfu = dfu_device_get_dfu_device();
 	dfu_device_init(dfu, &dfu_function, &usbdfu_dfu_ops,
 			dfu_data_buffer, dfu_function.wTransferSize, NULL);
@@ -261,6 +267,7 @@ static void stfub_usb_init(void)
 			    (sizeof(usb_strings) / sizeof(usb_strings[0])));
 	usbd_set_control_buffer_size(usbddev, sizeof(usbd_control_buffer));
 
+	usbd_register_set_altsetting_callback(usbddev, stfub_dfu_swith_altsetting);
 	usbd_register_control_callback(usbddev,
 				       USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
 				       USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
