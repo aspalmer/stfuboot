@@ -180,13 +180,13 @@ static int print(char **out, int *varg)
 
 /* assuming sizeof(void *) == sizeof(int) */
 
-void __printf(const char *format, ...)
+int stfub_printf(const char *format, ...)
 {
 	register int *varg = (int *)(&format);
-	print(0, varg);
+	return print(0, varg);
 }
 
-int sprintf(char *out, const char *format, ...)
+int stfub_sprintf(char *out, const char *format, ...)
 {
 	register int *varg = (int *)(&format);
 	return print(&out, varg);

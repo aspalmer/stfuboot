@@ -38,6 +38,7 @@
 
 #include "dfu.h"
 #include "uart.h"
+#include "printf.h"
 
 #define MIN(a, b) ((a)<(b) ? (a) : (b))
 
@@ -266,8 +267,6 @@ static void stfub_usb_init(void)
 				       dfu_device_handle_control_request);
 }
 
-void __printf(const char *format, ...);
-
 int main(void)
 {
 	stfub_clocks_init();
@@ -278,9 +277,9 @@ int main(void)
 	   TODO: For some reason the first character of this banner is
 	   lost, this has to be investigated further
 	 */
-	__printf("=========================================\n");
-	__printf("= stfuboot -- Insert smart tagline here =\n");
-	__printf("=========================================\n");
+	stfub_printf("=========================================\n");
+	stfub_printf("= stfuboot -- Insert smart tagline here =\n");
+	stfub_printf("=========================================\n");
 
 	stfub_usb_init();
 	
