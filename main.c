@@ -42,14 +42,10 @@
 
 #define MIN(a, b) ((a)<(b) ? (a) : (b))
 
-static usbd_device *usbddev = NULL;
-static struct dfu_device *dfu = NULL;
 /* We need a special large control buffer for this device: */
 u8 usbd_control_buffer[2048];
-u8 dfu_data_buffer[2048];
 
-
-const struct usb_device_descriptor dev = {
+const struct usb_device_descriptor stfub_dev_descr = {
 	.bLength		= USB_DT_DEVICE_SIZE,
 	.bDescriptorType	= USB_DT_DEVICE,
 	.bcdUSB			= 0x0200,
@@ -66,7 +62,7 @@ const struct usb_device_descriptor dev = {
 	.bNumConfigurations	= 1,
 };
 
-const struct usb_dfu_descriptor dfu_function = {
+const struct usb_dfu_descriptor stfub_dfu_descr = {
 	.bLength		= sizeof(struct usb_dfu_descriptor),
 	.bDescriptorType	= DFU_FUNCTIONAL,
 	.bmAttributes		= USB_DFU_CAN_UPLOAD | USB_DFU_WILL_DETACH,
@@ -75,46 +71,26 @@ const struct usb_dfu_descriptor dfu_function = {
 	.bcdDFUVersion		= 0x0110,
 };
 
+#define STFUB_AS_ISTRING(x) ((x) + 4)
+#define STFUB_DFU_INTERFACE(num, func)				 \
+	{							 \
+		.bLength		= USB_DT_INTERFACE_SIZE, \
+		.bDescriptorType	= USB_DT_INTERFACE,	 \
+		.bInterfaceNumber	= 0,			 \
+		.bAlternateSetting	= num,			 \
+		.bNumEndpoints		= 0,			 \
+		.bInterfaceClass	= 0xFE,			 \
+		.bInterfaceSubClass	= 1,			 \
+		.bInterfaceProtocol	= 2,			 \
+		.iInterface		= STFUB_AS_ISTRING(num), \
+		.extra			= &func,		 \
+		.extralen		= sizeof(func),		 \
+	}
+
 const struct usb_interface_descriptor stfub_interface_descriptors[] ={
-	{
-		.bLength		= USB_DT_INTERFACE_SIZE,
-		.bDescriptorType	= USB_DT_INTERFACE,
-		.bInterfaceNumber	= 0,
-		.bAlternateSetting	= 0,
-		.bNumEndpoints		= 0,
-		.bInterfaceClass	= 0xFE, /* Device Firmware Upgrade */
-		.bInterfaceSubClass	= 1,
-		.bInterfaceProtocol	= 2,
-		.iInterface		= 4,
-		.extra			= &dfu_function,
-		.extralen		= sizeof(dfu_function),
-	},
-	{
-		.bLength		= USB_DT_INTERFACE_SIZE,
-		.bDescriptorType	= USB_DT_INTERFACE,
-		.bInterfaceNumber	= 0,
-		.bAlternateSetting	= 1,
-		.bNumEndpoints		= 0,
-		.bInterfaceClass	= 0xFE, /* Device Firmware Upgrade */
-		.bInterfaceSubClass	= 1,
-		.bInterfaceProtocol	= 2,
-		.iInterface		= 5,
-		.extra			= &dfu_function,
-		.extralen		= sizeof(dfu_function),
-	},
-	{
-		.bLength		= USB_DT_INTERFACE_SIZE,
-		.bDescriptorType	= USB_DT_INTERFACE,
-		.bInterfaceNumber	= 0,
-		.bAlternateSetting	= 2,
-		.bNumEndpoints		= 0,
-		.bInterfaceClass	= 0xFE, /* Device Firmware Upgrade */
-		.bInterfaceSubClass	= 1,
-		.bInterfaceProtocol	= 2,
-		.iInterface		= 6,
-		.extra			= &dfu_function,
-		.extralen		= sizeof(dfu_function),
-	},
+		STFUB_DFU_INTERFACE(STFUB_AS_MAIN_MEMORY, stfub_dfu_descr),
+		STFUB_DFU_INTERFACE(STFUB_AS_SYSTEM_MEMORY, stfub_dfu_descr),
+		STFUB_DFU_INTERFACE(STFUB_AS_OPTION_BYTES, stfub_dfu_descr),
 };
 
 struct usb_interface stfub_interfaces[] = {
@@ -148,85 +124,6 @@ static const char *usb_strings[] = {
 	"Option Bytes [0x1FFFF800 - 0x1FFFF80F]",
 };
 
-static int usbdfu_read_block(struct dfu_device *dfu, u16 block_no,
-			     u8 *buf, int len, void *context)
-{
-	int read_len;
-	const u8 *start_address  = (const u8 *)0x1FFFB000;
-	const u8 *end_address    = (const u8 *)0x1FFFF800;
-
-	static const u8 *block;
-
-	if (block_no == 0)
-		block = start_address;
-
-	read_len = MIN(len, end_address - block);
-
-	memcpy(buf, block, read_len);
-
-	block += read_len;
-
-	return read_len;
-}
-
-static int usbdfu_write_block(struct dfu_device *dfu, u16 block_no,
-			      const u8 *buf, int len, void *context)
-{
-	/* 
-	   FIXME: I feel like this code is not handling all the edge
-	   cases. Someday it will have to be improved.
-	 */
-
-#if 0
-	int write_len, i;
-	const u8 *start_address  = (const u8 *)0x08000000;
-	const u8 *end_address    = (const u8 *)0x08040000;
-
-	static const u8 *block;
-
-	if (block_no == 0)
-		block = start_address;
-
-	write_len = MIN(len, end_address - block);
-
-	flash_unlock();
-
-	/* Clear the least significat bit to get the highest even
-	 * number less or eqal to write_len */
-	for (i = 0; i < (write_len & (~0x1)); i += 2)
-		flash_program_half_word((u32)(block + i), *(u16 *)(buf + i));
-
-	if (i != write_len) {
-		/* It looks like len is odd and therefor the last byte
-		 * was not written do it here*/
-		/* 
-		   FIXME: Should it be
-		   u16 word = buf[len - 1] << 8;
-		   ?
-		 */
-		u16 word = buf[write_len - 1];
-		flash_program_half_word((u32)(block + i), word);
-	}
-
-	flash_lock();
-
-
-	block += write_len;
-#endif
-	return 0;
-}
-
-static bool usbdfu_all_data_in(struct dfu_device *dfu, void *context)
-{
-	return true;
-}
-
-static const struct dfu_device_ops usbdfu_dfu_ops = {
-	.read_block	= usbdfu_read_block,
-	.write_block	= usbdfu_write_block,
-	.all_data_in    = usbdfu_all_data_in,
-};
-
 static void stfub_clocks_init(void)
 {
 	/*
@@ -253,34 +150,39 @@ static void stfub_gpio_init(void)
 	gpio_primary_remap(AFIO_MAPR_SWJ_CFG_FULL_SWJ, AFIO_MAPR_USART2_REMAP);
 }
 
-static void stfub_usb_init(void)
+static usbd_device *stfub_usb_init(void)
 {
+	static usbd_device *usbddev;
+
 	desig_get_unique_id_as_string(serial_number_string,
 				      sizeof(serial_number_string));
 
-	dfu = dfu_device_get_dfu_device();
-	dfu_device_init(dfu, &dfu_function, &usbdfu_dfu_ops,
-			dfu_data_buffer, dfu_function.wTransferSize, NULL);
+	stfub_dfu_init(&stfub_dfu_descr);
 
-
-	usbddev = usbd_init(&stm32f107_usb_driver, &dev, &config, usb_strings,
+	usbddev = usbd_init(&stm32f107_usb_driver, &stfub_dev_descr,
+			    &config, usb_strings,
 			    (sizeof(usb_strings) / sizeof(usb_strings[0])));
 	usbd_set_control_buffer_size(usbddev, sizeof(usbd_control_buffer));
 
-	usbd_register_set_altsetting_callback(usbddev, stfub_dfu_swith_altsetting);
+	usbd_register_set_altsetting_callback(usbddev,
+					      stfub_dfu_switch_altsetting);
 	usbd_register_control_callback(usbddev,
 				       USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
 				       USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
-				       dfu_device_handle_control_request);
+				       stfub_dfu_handle_control_request);
+
+	return usbddev;
 }
 
 int main(void)
 {
+	static usbd_device *usbddev;
+
 	stfub_clocks_init();
 	stfub_gpio_init();
 	stfub_uart_init();
-	
-	/* 
+
+	/*
 	   TODO: For some reason the first character of this banner is
 	   lost, this has to be investigated further
 	 */
@@ -288,10 +190,10 @@ int main(void)
 	stfub_printf("= stfuboot -- Insert smart tagline here =\n");
 	stfub_printf("=========================================\n");
 
-	stfub_usb_init();
-	
+	usbddev = stfub_usb_init();
+
 	while (1) {
 		usbd_poll(usbddev);
-		dfu_device_tick(dfu);
+		stfub_dfu_tick();
 	}
 }

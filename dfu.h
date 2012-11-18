@@ -28,51 +28,19 @@
 
 #include "printf.h"
 
-struct dfu_device;
-
-struct dfu_device_ops {
-	int (*read_block) (struct dfu_device *dfu, u16 block_no,
-			   u8 *buf, int len, void *context);
-	int (*write_block) (struct dfu_device *dfu, u16 block_no,
-			    const u8 * buf, int len, void *context);
-	bool (*all_data_in) (struct dfu_device *dfu, void *context);
+enum stfub_memory_region_altsetting {
+	STFUB_AS_MAIN_MEMORY = 0,
+	STFUB_AS_SYSTEM_MEMORY,
+	STFUB_AS_OPTION_BYTES,
 };
 
-
-struct dfu_device {
-	const struct usb_dfu_descriptor *descr;
-	const struct dfu_device_ops     *ops;
-
-	void *context;
-	u32 timeout;
-
-	enum dfu_status status;
-	enum dfu_state  state;
-
-	struct {
-		int num;
-		u8 *buf;
-		int buf_size;
-		int len;
-	} block;
-
-
-	bool block_completed;
-};
-
-int dfu_device_handle_control_request(usbd_device *udbddev, struct usb_setup_data *req, u8 **buf,
-				      u16 *len, void (**complete)(usbd_device *udbddev, struct usb_setup_data *req));
-
-void dfu_device_tick(struct dfu_device *dfu);
-
-void dfu_device_init(struct dfu_device *dfu,
-		     const struct usb_dfu_descriptor *descr,
-		     const struct dfu_device_ops     *ops,
-		     u8 *buf, int buf_size,
-		     void *context);
-
-struct dfu_device *dfu_device_get_dfu_device(void);
-
-void stfub_dfu_swith_altsetting(usbd_device *usbd_dev, u16 interface, u16 altsetting);
+int stfub_dfu_handle_control_request(usbd_device *udbddev,
+				     struct usb_setup_data *req,
+				     u8 **buf, u16 *len,
+				     void (**complete)(usbd_device *usbddev,
+						       struct usb_setup_data *req));
+void stfub_dfu_tick(void);
+void stfub_dfu_init(const struct usb_dfu_descriptor *descr);
+void stfub_dfu_switch_altsetting(usbd_device *usbd_dev, u16 interface, u16 altsetting);
 
 #endif
