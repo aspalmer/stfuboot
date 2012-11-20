@@ -69,4 +69,8 @@ clean:
 bootstrap:
 	dfu-util -d 0483:df11 -a0 -i0 -s0x08000000 -D stfuboot.bin
 
+assembly: stfuboot.elf
+	@printf "  DISASM  $(subst $(shell pwd)/,,$(@))\n"
+	$(Q)$(PREFIX)-objdump --disassemble stfuboot.elf > stfuboot.asm
+
 .PHONY: clean bootstrap
