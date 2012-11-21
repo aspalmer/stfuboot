@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+
+from optparse import OptionParser
+
+# import binascii
+import struct
+import crcmod
+import os
+
+
+def get_checksum(data):
+    crc32 = crcmod.Crc(0x104c11db7, initCrc=0xFFFFFFFF, rev=False)
+    for i in xrange(0, ((len(data) - 1) / 4)):
+        item = struct.unpack_from("<I", data, i * 4)[0]
+        crc32.update(struct.pack(">I", item))
+
+    return crc32.crcValue
+
+def get_stm32_checksum(data):
+    crc32 = crcmod.Crc(0x104c11db7, initCrc=0xFFFFFFFF, rev=False)
+    for word in data:
+        item = struct.unpack("<I", word)[0]
+        crc32.update(struct.pack(">I", item))
+
+    return crc32.crcValue
+
+
+if __name__ == "__main__":
+    parser = OptionParser(usage="usage: %prog [options] <FW file>")
+    parser.add_option("-a", "--add",
+                      action  ="store_true",
+                      dest    ="add_suffix",
+                      default = False,
+                      help    ="Add STFUBoot prefix to <file>")
+
+    parser.add_option("-D", "--delete",
+                      action  ="store_true",
+                      dest    ="delete_suffix",
+                      default = False,
+                      help    ="Delete STFUBoot prefix from <file>")
+
+    (options, args) = parser.parse_args()
+
+    image_name = args[0]
+    image_file = open(image_name, 'rb')
+    image_data = image_file.read()
+
+    file_crc  = get_checksum(image_data)
+    file_size = os.path.getsize(image_name)
+
+    image_file.close()
+
+    header = [struct.pack("<I", 0x00000000)] * (512 / 4)
+
+    header[0]  = struct.pack("<I", file_size)
+    header[-2] = struct.pack("<I", file_crc)
+    header[-1] = struct.pack("<I", get_stm32_checksum(header[:-1]))
+
+    new_image = open(image_name, 'wb')
+    for word in header:
+        new_image.write(word)
+    new_image.write(image_data)
+
+
+
+    # if options.delete_suffix:
+    #     pass
+    # elif options.add_suffix:
+        
+
+    #     print image.read()
+        
+
+    
+
+    
+
+    # app_bin = open('app.bin', 'rb')
+    # app_elf = ELFFile(open('app.elf', 'rb'))
+    # _text_data = app_elf.get_section_by_name('.text').data()
+
+    # text_area_size = len(_text_data) / 4 #size of text area in words
+
+    # loader_data, application_data = split_fw(app_bin)
+    # write_loader(loader_data)
+
+    # checksum = get_checksum(_text_data)
+    # write_application(application_data, checksum, text_area_size)
+
+    # print "Application and Loader firmware hunks written"
+    # print "Application Checksum:", str(hex(checksum))[:-1]
+    # app_bin.close()

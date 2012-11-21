@@ -23,6 +23,11 @@
 #include <libopencm3/cm3/vector.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/stm32/usart.h>
+#include <libopencm3/stm32/crc.h>
+#include <libopencm3/stm32/f1/rcc.h>
+
+#include <libstfub/scratch.h>
+#include <libstfub/info_block.h>
 
 #include "uart.h"
 
@@ -32,8 +37,38 @@ extern unsigned _ram_start;
 
 extern int main(void);
 
+
+
+extern unsigned _if_rom_start;
+extern unsigned _ap_rom_start;
+
+static bool stfub_firmware_is_valid(void)
+{
+	u32 crc;
+	struct stfub_firmware_info *info_block;
+
+	info_block = (struct stfub_firmware_info *)&_if_rom_start;
+
+#if 0
+	crc = crc_calculate_block((u32 *) info_block,
+				  sizeof(*info_block) / 4 - 1);
+
+	if (crc != info_block->crc.info_block)
+		return false;
+#endif
+	crc = crc_calculate_block((u32 *)&_ap_rom_start,
+				  info_block->size / 4);
+
+	crc = 0xDEADBEEF;
+
+	/* return crc == info_block->crc.firmware; */
+
+	return true;
+}
+
+
 __attribute__ ((noreturn))
-void ram_reset_handler(void)
+void stfub_ram_reset_handler(void)
 {
 	volatile unsigned *src, *dest;
 
@@ -57,30 +92,44 @@ void blocking_handler(void);
 void null_handler(void);
 
 __attribute__ ((section(".reset_code"), naked, noreturn))
-void reset_handler(void)
+void stfub_rom_reset_handler(void)
 {
 	volatile unsigned *src, *dest;
 	vector_table_t *vtable;
-
-#if 0				/* TODO: implement jumping to DFU
-				 * from user application*/
-	if (get_pc() > (u32) &_system_rom_start)
-		/* Application jumped to DFU */
-		src = (unisgned *)((u32) &_system_rom_start + (u32) &_text_loadaddr);
-	else
-		src = &_text_loadaddr;
-#endif
-
 
 	/* Copy the .text section to the the system RAM */
 	for (src = &_text_loadaddr, dest = &_text; dest < &_etext; src++, dest++)
 		*dest = *src;
 
+	rcc_clock_setup_in_hsi_out_48mhz();
+	rcc_peripheral_enable_clock(&RCC_AHBENR, RCC_AHBENR_CRCEN);
+
+	if (stfub_scratchpad_is_valid() && stfub_scratchpad_dfu_switch_requested())
+		goto enter_dfu_mode;
+
+	if (!stfub_firmware_is_valid()) {
+		goto enter_dfu_mode;
+	}
+
+
+	rcc_peripheral_disable_clock(&RCC_AHBENR, RCC_AHBENR_CRCEN);
+	
+	rcc_set_sysclk_source(RCC_CFGR_SW_SYSCLKSEL_HSICLK);
+	rcc_osc_off(PLL);
+
+	vtable = (vector_table_t *)&_ap_rom_start;
+
+ 	SCB_VTOR = (u32)vtable;
+	vtable->reset();
+
+enter_dfu_mode:
+	rcc_peripheral_disable_clock(&RCC_AHBENR, RCC_AHBENR_CRCEN);
+
 	/* Patch vector table so it would point to correct handlers
 	 * located in RAM */
-	vtable = (vector_table_t *) &_ram_start;
+	vtable = (vector_table_t *)&_ram_start;
 
-	vtable->reset			= ram_reset_handler;
+	vtable->reset			= stfub_ram_reset_handler;
 	vtable->nmi			= null_handler;
 	vtable->hard_fault		= blocking_handler;
 	vtable->memory_manage_fault	= blocking_handler;
@@ -96,23 +145,24 @@ void reset_handler(void)
 }
 
 __attribute__ ((section(".reset_code"), naked))
-void rom_blocking_handler(void)
+void stfub_rom_blocking_handler(void)
 {
 	while (1) ;
 }
 
 __attribute__ ((section(".reset_code"), naked))
-void rom_null_handler(void)
+void stfub_rom_null_handler(void)
 {
 	/* Do nothing. */
 }
 
-void nmi_handler(void)			__attribute__ ((alias ("rom_null_handler")));
-void hard_fault_handler(void)		__attribute__ ((alias ("rom_blocking_handler")));
-void mem_manage_handler(void)		__attribute__ ((alias ("rom_blocking_handler")));
-void bus_fault_handler(void)		__attribute__ ((alias ("rom_blocking_handler")));
-void usage_fault_handler(void)		__attribute__ ((alias ("rom_blocking_handler")));
-void sv_call_handler(void)		__attribute__ ((alias ("rom_null_handler")));
-void debug_monitor_handler(void)	__attribute__ ((alias ("rom_null_handler")));
-void pend_sv_handler(void)		__attribute__ ((alias ("rom_null_handler")));
-void sys_tick_handler(void)		__attribute__ ((alias ("rom_null_handler")));
+void reset_handler(void)		 __attribute__ ((alias ("stfub_rom_reset_handler")));
+void nmi_handler(void)			__attribute__ ((alias ("stfub_rom_null_handler")));
+void hard_fault_handler(void)		__attribute__ ((alias ("stfub_rom_blocking_handler")));
+void mem_manage_handler(void)		__attribute__ ((alias ("stfub_rom_blocking_handler")));
+void bus_fault_handler(void)		__attribute__ ((alias ("stfub_rom_blocking_handler")));
+void usage_fault_handler(void)		__attribute__ ((alias ("stfub_rom_blocking_handler")));
+void sv_call_handler(void)		__attribute__ ((alias ("stfub_rom_null_handler")));
+void debug_monitor_handler(void)	__attribute__ ((alias ("stfub_rom_null_handler")));
+void pend_sv_handler(void)		__attribute__ ((alias ("stfub_rom_null_handler")));
+void sys_tick_handler(void)		__attribute__ ((alias ("stfub_rom_null_handler")));

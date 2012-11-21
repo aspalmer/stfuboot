@@ -37,12 +37,12 @@ struct stfub_memory_bank {
 
 static const struct stfub_memory_bank stfub_memory_banks[] = {
 	[STFUB_AS_MAIN_MEMORY] = {
-		.start	= 0x08000000,
+		.start	= 0x08004800,
 		.end	= 0x08040000,
 	},
 	[STFUB_AS_SYSTEM_MEMORY] = {
-		.start	= 0x1FFFB000,
-		.end	= 0x1FFFF800,
+		.start	= 0x08000000,
+		.end	= 0x08004800,
 	},
 	[STFUB_AS_OPTION_BYTES] = {
 		.start	= 0x1FFFF800,
@@ -143,6 +143,7 @@ static int stfub_dfu_write_firmware_block(struct stfub_dfu *dfu)
 				end_address - dfu->block.writeptr);
 
 		flash_unlock();
+		flash_unlock_option_bytes();
 
 		flash_erase_page((u32)dfu->block.writeptr);
 

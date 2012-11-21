@@ -32,7 +32,7 @@ CFLAGS ?= -Os -g -Waddress -Warray-bounds -Wchar-subscripts -Wenum-compare 	\
 	  -Wunused-value -Wvolatile-register-var -Wextra -fno-common -mthumb	\
 	  -mcpu=cortex-m3 -msoft-float -MD
 
-CFLAGS += -DSTM32F1 -Ilibopencm3/include
+CFLAGS += -DSTM32F1 -Ilibopencm3/include -Iinclude
 
 LDFLAGS ?= -T bootloader.ld -Wl,--start-group -Wl,--end-group 	\
 	   -nostartfiles -Wl,--gc-sections -mthumb -mcpu=cortex-m3 -msoft-float
@@ -47,7 +47,7 @@ MAKEFLAGS += --no-print-directory
 endif
 
 # common objects
-OBJS += uart.o printf.o dfu.o main.o reset.o
+OBJS += uart.o printf.o dfu.o main.o reset.o scratchpad.o
 
 all: stfuboot.bin
 
