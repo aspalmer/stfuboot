@@ -57,7 +57,12 @@ SECTIONS
 
 	.reset_code : {
 		    *(.text*)
-	} >bl_rom
+	} > bl_rom
+
+	.exception_handlers : {
+		    *(.text*)
+		    *(.rodata*)
+	} > be_rom
 
 	.bss : {
 		*(.bss*)	/* Read-write zero initialized data */

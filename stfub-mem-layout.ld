@@ -31,9 +31,11 @@ MEMORY
 {
 	ram	(rwx)	: ORIGIN = 0x20000000, LENGTH = 65504 /* 64K - 32*/
 	scratch	(rw)	: ORIGIN = 0x2000FFE0, LENGTH = 32
-	bl_rom	(rx)	: ORIGIN = 0x08000000, LENGTH = 18K
+	bl_rom	(rx)	: ORIGIN = 0x08000000, LENGTH = 16K
+	be_rom	(rx)	: ORIGIN = 0x08004000, LENGTH = 2K
 	if_rom	(rx)	: ORIGIN = 0x08004800, LENGTH = 512
 	ap_rom	(rx)	: ORIGIN = 0x08004A00, LENGTH = 243200 /* 256K - 18K - 512*/
+	sy_rom	(rx)	: ORIGIN = 0x1FFFB000, LENGTH = 18K
 	op_rom	(r)	: ORIGIN = 0x1FFFF800, LENGTH = 16
 }
 
@@ -47,3 +49,4 @@ PROVIDE(_if_rom_start	= ORIGIN(if_rom));
 PROVIDE(_if_rom_end	= ORIGIN(if_rom) + LENGTH(if_rom));
 PROVIDE(_ap_rom_start	= ORIGIN(ap_rom));
 PROVIDE(_ap_rom_end	= ORIGIN(ap_rom) + LENGTH(ap_rom));
+PROVIDE(_sy_rom_start	= ORIGIN(sy_rom));

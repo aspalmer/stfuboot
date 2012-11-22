@@ -34,7 +34,7 @@ CFLAGS ?= -Os -g -Waddress -Warray-bounds -Wchar-subscripts -Wenum-compare 	\
 
 CFLAGS += -DSTM32F1 -Ilibopencm3/include -Iinclude
 
-LDFLAGS ?= -T bootloader.ld -Wl,--start-group -Wl,--end-group 	\
+LDFLAGS ?= -Wl,--start-group -Wl,--end-group 	\
 	   -nostartfiles -Wl,--gc-sections -mthumb -mcpu=cortex-m3 -msoft-float
 
 LIBS = -Llibopencm3/lib -lopencm3_stm32f1
@@ -49,15 +49,19 @@ endif
 # common objects
 OBJS += uart.o printf.o dfu.o main.o reset.o scratchpad.o
 
-all: stfuboot.bin
+all: stfuboot.bin stfuboot-factory-bl.bin
 
 stfuboot.bin: stfuboot.elf
+	@printf "  OBJCOPY $(subst $(shell pwd)/,,$(@))\n"
+	$(Q)$(PREFIX)-objcopy -Obinary --remove-section=".exception_handlers" $< $@
+
+stfuboot-factory-bl.bin: stfuboot.elf
 	@printf "  OBJCOPY $(subst $(shell pwd)/,,$(@))\n"
 	$(Q)$(PREFIX)-objcopy -Obinary $< $@
 
 stfuboot.elf: $(OBJS)
 	@printf "  LD      $(subst $(shell pwd)/,,$(@))\n"
-	$(Q)$(CC) -o $@ $(LDFLAGS) $(OBJS) $(LIBS)
+	$(Q)$(CC) -o $@ -T bootloader.ld $(LDFLAGS) $(OBJS) $(LIBS)
 
 %.o: %.c
 	@printf "  CC      $(subst $(shell pwd)/,,$(@))\n"
@@ -67,7 +71,9 @@ clean:
 	$(Q)rm -f *.o *.d ../*.o ../*.d
 
 bootstrap:
-	dfu-util -d 0483:df11 -a0 -i0 -s0x08000000 -D stfuboot.bin
+	dfu-util -d 0483:df11 -a0 -i0 -s0x08000000 -D stfuboot-factory-bl.bin
+flash:
+	dfu-util -d 0483:df11 -a1 -D stfuboot.bin
 
 assembly: stfuboot.elf
 	@printf "  DISASM  $(subst $(shell pwd)/,,$(@))\n"
