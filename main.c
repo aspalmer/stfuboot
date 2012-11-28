@@ -56,9 +56,9 @@ const struct usb_device_descriptor stfub_dev_descr = {
 	.idVendor		= 0x0483,
 	.idProduct		= 0xDF11,
 	.bcdDevice		= 0x0200,
-	.iManufacturer		= 1,
-	.iProduct		= 2,
-	.iSerialNumber		= 3,
+	.iManufacturer		= 0,
+	.iProduct		= 1,
+	.iSerialNumber		= 2,
 	.bNumConfigurations	= 1,
 };
 
@@ -71,7 +71,7 @@ const struct usb_dfu_descriptor stfub_dfu_descr = {
 	.bcdDFUVersion		= 0x0110,
 };
 
-#define STFUB_AS_ISTRING(x) ((x) + 4)
+#define STFUB_AS_ISTRING(x) ((x) + 3)
 #define STFUB_DFU_INTERFACE(num, func)				 \
 	{							 \
 		.bLength		= USB_DT_INTERFACE_SIZE, \
@@ -115,7 +115,6 @@ struct usb_config_descriptor config = {
 
 static char serial_number_string[30];
 static const char *usb_strings[] = {
-	"Innovative Converged Devices",
 	"Device with STFUBoot",
 	serial_number_string,
 	/* This string is used by ST Microelectronics' DfuSe utility. */
