@@ -41,7 +41,7 @@ static const struct stfub_memory_bank stfub_memory_banks[] = {
 		.end	= 0x08040000,
 	},
 	[STFUB_AS_SYSTEM_MEMORY] = {
-		.start	= 0x08000000,
+		.start	= 0x08001000,
 		.end	= 0x08004800,
 	},
 	[STFUB_AS_OPTION_BYTES] = {
@@ -150,7 +150,7 @@ static int stfub_dfu_write_firmware_block(struct stfub_dfu *dfu)
 		for (i = 0; i < write_len; i += 2)
 			flash_program_half_word((u32)(dfu->block.writeptr + i),
 						*(u16 *)(dfu->pending.block + i));
-		
+
 		flash_lock();
 
 		dfu->block.writeptr += write_len;
@@ -238,7 +238,7 @@ static int stfub_dfu_queue_firmware_block(struct stfub_dfu *dfu,
 
 	dfu->pending.block_no = block_no;
 	memcpy(dfu->pending.block, buf, len);
-	
+
 	dfu->pending.block_len = len;
 
 	return 0;
@@ -259,17 +259,17 @@ void stfub_dfu_tick(void)
 {
 	switch(stfub_dfu_get_state(&dfu)) {
 	case STATE_DFU_DNBUSY:
-		if (stfub_dfu_write_pending(&dfu)) 
+		if (stfub_dfu_write_pending(&dfu))
 			if (stfub_dfu_write_firmware_block(&dfu) < 0)  {
 				stfub_dfu_set_state(&dfu, STATE_DFU_ERROR);
 				break;
 			}
-			
+
 		stfub_dfu_set_state(&dfu, STATE_DFU_DNLOAD_SYNC);
 		break;
 #if 0
 	case STATE_DFU_MANIFEST:
-		if (stfub_dfu_timeout_elapsed(&dfu)){ 
+		if (stfub_dfu_timeout_elapsed(&dfu)){
 			if (stfub_dfu_attribute_is_set(&dfu, USB_DFU_MANIFEST_TOLERANT))
 				stfub_dfu_set_state(&dfu, STATE_DFU_MANIFEST_SYNC);
 			else

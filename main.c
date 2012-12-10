@@ -33,6 +33,7 @@
 #include <libopencm3/stm32/f1/flash.h>
 #include <libopencm3/stm32/desig.h>
 
+#include <libopencm3/stm32/crc.h>
 
 #include <libopencm3/usb/usbd.h>
 
@@ -65,7 +66,7 @@ const struct usb_device_descriptor stfub_dev_descr = {
 const struct usb_dfu_descriptor stfub_dfu_descr = {
 	.bLength		= sizeof(struct usb_dfu_descriptor),
 	.bDescriptorType	= DFU_FUNCTIONAL,
-	.bmAttributes		= USB_DFU_CAN_DOWNLOAD |USB_DFU_CAN_UPLOAD | USB_DFU_WILL_DETACH,
+	.bmAttributes		= USB_DFU_CAN_DOWNLOAD | USB_DFU_CAN_UPLOAD | USB_DFU_WILL_DETACH,
 	.wDetachTimeout		= 255,
 	.wTransferSize		= 2048, /* STM32 flash page size */
 	.bcdDFUVersion		= 0x0110,
@@ -118,17 +119,18 @@ static const char *usb_strings[] = {
 	"Device with STFUBoot",
 	serial_number_string,
 	/* This string is used by ST Microelectronics' DfuSe utility. */
-	"Main Memory [0x08000000 - 0x0803FFFF]",
-	"System Memory [0x1FFFB000 - 0x1FFFF7FF]",
-	"Option Bytes [0x1FFFF800 - 0x1FFFF80F]",
+	"Main Memory [0x08004800 - 0x08040000]",
+	"System Memory [0x08001000 - 0x08004800]",
+	"Option Bytes [0x1FFFF800 - 0x1FFFF810]",
 };
 
 static void stfub_clocks_init(void)
 {
 	/*
-	   TODO: For some reason the deivce would not be able to
-	   initialize PLL after if this FW is flashed using factory
-	   bootloader. Power-cycling the board will solve the issue.
+	   TODO: For some reason the device would not be able to
+	   initialize PLL after exiting the factory
+	   bootloader (not due to flashing). Power-cycling the board will solve the issue.
+	   Using HSE instead doesn't have this issuer
 	 */
 	rcc_clock_setup_in_hsi_out_48mhz();
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_AFIOEN);
@@ -182,7 +184,7 @@ int main(void)
 	stfub_uart_init();
 
 	/*
-	   TODO: For some reason the first character of this banner is
+	   TODO: For some reason he first character of this banner is
 	   lost, this has to be investigated further
 	 */
 	stfub_printf("=========================================\n");

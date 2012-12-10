@@ -23,7 +23,7 @@
 PREFIX	?= arm-none-eabi
 CC 	:= $(PREFIX)-gcc
 
-CFLAGS ?= -Os -g -Waddress -Warray-bounds -Wchar-subscripts -Wenum-compare 	\
+CFLAGS ?= -O0 -g -Waddress -Warray-bounds -Wchar-subscripts -Wenum-compare 	\
           -Wimplicit-int -Wimplicit-function-declaration -Wcomment 		\
           -Wformat -Wmain -Wmissing-braces -Wnonnull -Wparentheses		\
 	  -Wpointer-sign -Wreturn-type -Wsequence-point -Wsign-compare		\

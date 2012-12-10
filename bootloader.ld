@@ -29,7 +29,9 @@
 INCLUDE stfub-mem-layout.ld
 
 /* Enforce emmition of the vector table. */
+EXTERN (pvector_table)
 EXTERN (vector_table)
+
 
 /* Define the entry point of the output file. */
 ENTRY(reset_handler)
@@ -37,7 +39,19 @@ ENTRY(reset_handler)
 /* Define sections. */
 SECTIONS
 {
+	.exception_handlers : {
+	 	reset.o (.vectors)
+		. = ALIGN(4);
+	 	reset.o (.exception_handlers)
+		. = ALIGN(4);
+	} > be_rom
+
+	.reset_code : {
+		reset.o (.reset_code*)
+	} > bl_rom
+
 	.text : {
+	      	. = ALIGN(512);
 		_text = .;
 		*(.vectors)	/* Vector table */
 		*(.text*)	/* Program code */
@@ -46,7 +60,11 @@ SECTIONS
 		. = ALIGN(4);
 		_etext = .;
 	} >ram AT >bl_rom
+
+
+
 	_text_loadaddr = LOADADDR(.text);
+
 	.data : {
 		_data = .;
 		*(.data*)	/* Read-write initialized data */
@@ -54,15 +72,6 @@ SECTIONS
 		_edata = .;
 	} > ram AT > bl_rom
 	_data_loadaddr = LOADADDR(.data);
-
-	.reset_code : {
-		    *(.text*)
-	} > bl_rom
-
-	.exception_handlers : {
-		    *(.text*)
-		    *(.rodata*)
-	} > be_rom
 
 	.bss : {
 		*(.bss*)	/* Read-write zero initialized data */
