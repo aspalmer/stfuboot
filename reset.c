@@ -64,27 +64,84 @@ static bool stfub_firmware_is_valid(void)
 	info_block = (struct stfub_firmware_info *)&_if_rom_start;
 
 #if 1
+	crc_reset();
 	crc = crc_calculate_block((u32 *) info_block,
-				  (sizeof(*info_block) / 4) - 4);
+			(sizeof(*info_block) / 4) - 1);
 
 	if (crc != info_block->crc.info_block)
 		return false;
 #endif
+	crc_reset();
 	crc = crc_calculate_block((u32 *)&_ap_rom_start,
-				  info_block->size / 4);
+			info_block->size / 4-1);
 
 	return crc == info_block->crc.firmware;
 	/* force to dfu mode if previous line commented */
 	return false;
 }
+u32 stfub_firmware_crc(void)
+{
+	struct stfub_firmware_info *info_block;
+
+	info_block = (struct stfub_firmware_info *)&_if_rom_start;
+
+	return info_block->crc.firmware;
+}
+
+u32 stfub_info_calc_crc(void)
+{
+	u32 crc = 0;
+	crc_reset();
+	struct stfub_firmware_info *info_block;
+
+	info_block = (struct stfub_firmware_info *)&_if_rom_start;
+
+	crc_reset();
+	crc = crc_calculate_block((u32 *) info_block,
+			(sizeof(*info_block) / 4) - 1);
+	return crc;
+}
+u32 stfub_info_crc(void)
+{
+	struct stfub_firmware_info *info_block;
+
+	info_block = (struct stfub_firmware_info *)&_if_rom_start;
+
+	return info_block->crc.info_block;
+}
+
+u32 stfub_firmware_calc_crc(void)
+{
+	u32 crc = 0;
+	crc_reset();
+	struct stfub_firmware_info *info_block;
+
+	info_block = (struct stfub_firmware_info *)&_if_rom_start;
+
+	crc_reset();
+	crc = crc_calculate_block((u32 *)&_ap_rom_start,
+			(info_block->size ) / 4-1);
+
+	return crc;
+}
+
+u32 stfub_info_size(void)
+{
+	struct stfub_firmware_info *info_block;
+
+	info_block = (struct stfub_firmware_info *)&_if_rom_start;
+	return info_block->size;
+}
 
 
-__attribute__ ((noreturn, interrupt))
+
+
+	__attribute__ ((noreturn, interrupt))
 void stfub_ram_reset_handler(void)
 {
 	volatile unsigned *src, *dest;
 
- 	asm volatile("msr msp, %0" : : "r"(&_stack));
+	asm volatile("msr msp, %0" : : "r"(&_stack));
 
 	/* Copy .data section to system RAM */
 	for (src = &_data_loadaddr, dest = &_data; dest < &_edata; src++, dest++)
@@ -122,7 +179,7 @@ static void stfub_reset_stop_clocks(void)
 	rcc_osc_off(PLL);
 }
 
-__attribute__ ((section(".exception_handlers"), naked))
+	__attribute__ ((section(".exception_handlers"), naked))
 static void stfub_start_with_vector_table_at_offset(void *table)
 {
 	vector_table_t *vtable = table;
@@ -130,8 +187,8 @@ static void stfub_start_with_vector_table_at_offset(void *table)
 	vtable->reset();
 }
 
-	volatile bool scratchpad_is_valid, firmware_is_valid;
-__attribute__ ((section(".reset_code"), naked, noreturn, interrupt))
+volatile bool scratchpad_is_valid, firmware_is_valid;
+	__attribute__ ((section(".reset_code"), naked, noreturn, interrupt))
 void stfub_rom_reset_handler(void)
 {
 
@@ -147,12 +204,12 @@ void stfub_rom_reset_handler(void)
 		*dest = *src;
 
 	stfub_reset_start_clocks();
-	scratchpad_is_valid	= stfub_scratchpad_is_valid();
-	firmware_is_valid	= stfub_firmware_is_valid();
+	scratchpad_is_valid	= false; //stfub_scratchpad_is_valid();
+	firmware_is_valid	= false;//stfub_firmware_is_valid();
 	stfub_reset_stop_clocks();
 
 	if ((scratchpad_is_valid && stfub_scratchpad_dfu_switch_requested())
-	    || !firmware_is_valid) {
+			|| !firmware_is_valid) {
 		/* Patch vector table so it would point to correct handlers
 		 * located in RAM */
 		vtable = (vector_table_t *)&_ram_start;
@@ -164,7 +221,7 @@ void stfub_rom_reset_handler(void)
 	}
 }
 
-__attribute__ ((section(".exception_handlers")))
+	__attribute__ ((section(".exception_handlers")))
 bool stfub_exception_handlers_pages_are_protected(void)
 {
 	extern unsigned _op_rom_start;
@@ -179,7 +236,7 @@ bool stfub_exception_handlers_pages_are_protected(void)
 #endif
 }
 
-__attribute__ ((section(".exception_handlers")))
+	__attribute__ ((section(".exception_handlers")))
 bool stfub_bootloader_update_failed(void)
 {
 	extern unsigned _op_rom_start;
@@ -187,7 +244,7 @@ bool stfub_bootloader_update_failed(void)
 
 #if 0
 	return (obytes->data0 == ~obytes->ndata0) &&
-	       (obytes->data1 == ~obytes->ndata1) &&
+		(obytes->data1 == ~obytes->ndata1) &&
 		obytes->data0 == 0x42		  &&
 		obytes->data1 == 0x24;
 #else
@@ -196,17 +253,17 @@ bool stfub_bootloader_update_failed(void)
 
 }
 
-__attribute__ ((section(".exception_handlers"), naked, interrupt))
+	__attribute__ ((section(".exception_handlers"), naked, interrupt))
 void stfub_rom_early_reset(void)
 {
 	if (!stfub_exception_handlers_pages_are_protected() ||
-	    stfub_bootloader_update_failed())
+			stfub_bootloader_update_failed())
 		stfub_start_with_vector_table_at_offset(&_sy_rom_start);
 	else
 		stfub_start_with_vector_table_at_offset(&_text_loadaddr);
 }
 
-__attribute__ ((section(".exception_handlers"), naked, interrupt))
+	__attribute__ ((section(".exception_handlers"), naked, interrupt))
 void stfub_rom_retreat_to_factory_dfu(void)
 {
 	register vector_table_t *vtable;
@@ -221,13 +278,12 @@ void stfub_rom_retreat_to_factory_dfu(void)
 	asm volatile ("bx lr");
 }
 
-__attribute__ ((section(".exception_handlers"), naked, interrupt))
+	__attribute__ ((section(".exception_handlers"), naked, interrupt))
 void stfub_rom_null_handler(void)
 {
 	/* Do nothing. */
 	asm volatile ("bx lr");
 }
-
 
 __attribute__ ((section(".vectors")))
 vector_table_t pvector_table = {

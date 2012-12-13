@@ -175,22 +175,45 @@ static usbd_device *stfub_usb_init(void)
 	return usbddev;
 }
 
+extern u32 stfub_firmware_crc(void);
+extern u32 stfub_firmware_calc_crc(void);
+extern u32 scratch_calc_crc(void);
+extern u32 scratch_crc(void);
+extern u32 stfub_info_calc_crc(void);
+extern u32 stfub_info_crc(void);
+extern u32 stfub_info_size(void);
 int main(void)
 {
 	static usbd_device *usbddev;
-
+	u32 crc, crc_calc;
 	stfub_clocks_init();
 	stfub_gpio_init();
 	stfub_uart_init();
 
+	rcc_peripheral_enable_clock(&RCC_AHBENR, RCC_AHBENR_CRCEN);
 	/*
-	   TODO: For some reason he first character of this banner is
-	   lost, this has to be investigated further
-	 */
+TODO: For some reason he first character of this banner is
+lost, this has to be investigated further
+*/
 	stfub_printf("=========================================\n");
 	stfub_printf("= stfuboot -- Insert smart tagline here =\n");
 	stfub_printf("=========================================\n");
-
+	u32 info = stfub_info_size();
+	stfub_printf("info_size %u\n", info);
+	crc = stfub_info_crc();
+	crc_calc = stfub_info_calc_crc();
+	stfub_printf("info crc      %u\n",crc);
+        stfub_printf("info calc crc %u\n",crc_calc);
+	if (info < 243200 ) {
+		crc = stfub_firmware_crc();
+		crc_calc = stfub_firmware_calc_crc();
+		stfub_printf("fw crc      %u\n",crc);
+		stfub_printf("fw calc crc %u\n",crc_calc);
+	}
+	crc = scratch_crc();
+	crc_calc = scratch_calc_crc();
+	stfub_printf("scratch crc      %u\n",crc);
+	stfub_printf("scratch calc crc %u\n",crc_calc);
 	usbddev = stfub_usb_init();
 
 	while (1) {

@@ -6,12 +6,18 @@ from optparse import OptionParser
 import struct
 import crcmod
 import os
+def get_checksum_austin(data, start, end):
+    crc32 = crcmod.Crc(0x104c11db7, initCrc=0xFFFFFFFF, rev=False)
+    for i in xrange(start/4, (end - 1) / 4):
+        item = struct.unpack_from("<I", data, i * 4)[0]
+        crc32.update(struct.pack(">I", item))
+    return crc32.crcValue
 
 
 def get_checksum(data):
     crc32 = crcmod.Crc(0x104c11db7, initCrc=0xFFFFFFFF, rev=False)
     for i in xrange(0, ((len(data) - 1) / 4)):
-        item = struct.unpack_from(">I", data, i * 4)[0]
+        item = struct.unpack_from("<I", data, i * 4)[0]
         crc32.update(struct.pack(">I", item))
 
     return crc32.crcValue
@@ -19,7 +25,7 @@ def get_checksum(data):
 def get_stm32_checksum(data):
     crc32 = crcmod.Crc(0x104c11db7, initCrc=0xFFFFFFFF, rev=False)
     for word in data:
-        item = struct.unpack(">I", word)[0]
+        item = struct.unpack("<I", word)[0]
         crc32.update(struct.pack(">I", item))
 
     return crc32.crcValue
@@ -45,23 +51,49 @@ if __name__ == "__main__":
     image_file = open(image_name, 'rb')
     image_data = image_file.read()
 
-    file_crc  = get_checksum(image_data)
+    img_nm_i = image_name[:-4] + "_interim.bin"
+
     file_size = os.path.getsize(image_name)
+    #file_crc  = get_checksum(image_data)
+    interim_file = open(img_nm_i, 'w')
+    interim_file.write(image_data)
+
+#    interim_file.seek(file_size)
+    interim_file.write(struct.pack("<I", 0))
+    interim_file.close()
+
+    file_crc  = get_checksum_austin(image_data,0,0x10f9c)
 
     image_file.close()
 
-    header = [struct.pack("<I", 0x00000000)] * (512 / 4)
+    img_nm = image_name[:-4] + "_sliced.bin"
+    img_nm2 = image_name[:-4] + "_sliced2.bin"
+    new_image = open(img_nm2, 'w')
 
-    header[0]  = struct.pack("<I", file_size)
-    header[-2] = struct.pack("<I", file_crc)
-    header[-1] = struct.pack("<I", get_stm32_checksum(header[:-1]))
+    new_image.write(struct.pack("<I", file_size))
+    new_image.seek(504)
+    new_image.write(struct.pack("<I", file_crc))
+    new_image.write(struct.pack("<I", 0))
+
+    new_image.close()
+    new_image = open(img_nm2, 'r')
+    tst = new_image.read()
+    new_image.close()
+
+    new_image= open(img_nm, 'w')
+    new_image.seek(0)
+    new_image.write(struct.pack("<I", file_size))
+    new_image.seek(504)
+    new_image.write(struct.pack("<I", file_crc))
+    new_image.write(struct.pack("<I", get_checksum(tst)))
 
     print "Filesize:", file_size
     print "File CRC:", str(hex(file_crc))
-    new_image = open(image_name, 'wb')
-    for word in header:
-        new_image.write(word)
+    print "File CRC:", str(file_crc)
+    print "Header CRC:", str(hex(get_checksum(tst)))
+    print "Header CRC:", str(get_checksum(tst))
     new_image.write(image_data)
+    new_image.close()
 
     # if options.delete_suffix:
     #     pass

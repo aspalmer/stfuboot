@@ -20,10 +20,11 @@ static void stfub_scratchpad_recalculate_crc(void)
 {
 	struct stfub_scratchpad *scratchpad;
 
+	crc_reset();
 	scratchpad = (struct stfub_scratchpad *)&_scratch;
 	scratchpad->crc = 0;
 	scratchpad->crc = crc_calculate_block((uint32_t *)scratchpad,
-					      sizeof(*scratchpad) / 4);
+					      sizeof(*scratchpad) / 4-1);
 }
 
 bool stfub_scratchpad_is_valid(void)
@@ -33,10 +34,34 @@ bool stfub_scratchpad_is_valid(void)
 
 	scratchpad = (struct stfub_scratchpad *)&_scratch;
 
+	crc_reset();
 	crc = crc_calculate_block((uint32_t *)scratchpad,
-				  sizeof(*scratchpad) / 4);
+				  sizeof(*scratchpad) / 4-1);
 
 	return crc == scratchpad->crc;
+}
+
+u32 scratch_crc(void)
+{
+	struct stfub_scratchpad *scratchpad;
+
+	scratchpad = (struct stfub_scratchpad *)&_scratch;
+
+	return scratchpad->crc;
+}
+
+u32 scratch_calc_crc(void)
+{
+        u32 crc;
+        struct stfub_scratchpad *scratchpad;
+
+        scratchpad = (struct stfub_scratchpad *)&_scratch;
+
+	crc_reset();
+
+        crc = crc_calculate_block((uint32_t *)scratchpad,
+		                                  sizeof(*scratchpad) / 4-1);
+        return crc;
 }
 
 bool stfub_scratchpad_dfu_switch_requested(void)
