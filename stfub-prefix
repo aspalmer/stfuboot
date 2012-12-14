@@ -6,13 +6,6 @@ from optparse import OptionParser
 import struct
 import crcmod
 import os
-def get_checksum_austin(data, start, end):
-    crc32 = crcmod.Crc(0x104c11db7, initCrc=0xFFFFFFFF, rev=False)
-    for i in xrange(start/4, (end - 1) / 4):
-        item = struct.unpack_from("<I", data, i * 4)[0]
-        crc32.update(struct.pack(">I", item))
-    return crc32.crcValue
-
 
 def get_checksum(data):
     crc32 = crcmod.Crc(0x104c11db7, initCrc=0xFFFFFFFF, rev=False)
@@ -29,7 +22,6 @@ def get_stm32_checksum(data):
         crc32.update(struct.pack(">I", item))
 
     return crc32.crcValue
-
 
 if __name__ == "__main__":
     parser = OptionParser(usage="usage: %prog [options] <FW file>")
@@ -54,15 +46,13 @@ if __name__ == "__main__":
     img_nm_i = image_name[:-4] + "_interim.bin"
 
     file_size = os.path.getsize(image_name)
-    #file_crc  = get_checksum(image_data)
     interim_file = open(img_nm_i, 'w')
     interim_file.write(image_data)
 
-#    interim_file.seek(file_size)
     interim_file.write(struct.pack("<I", 0))
     interim_file.close()
 
-    file_crc  = get_checksum_austin(image_data,0,0x10f9c)
+    file_crc  = get_checksum(image_data)
 
     image_file.close()
 

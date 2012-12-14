@@ -63,14 +63,13 @@ static bool stfub_firmware_is_valid(void)
 
 	info_block = (struct stfub_firmware_info *)&_if_rom_start;
 
-#if 1
 	crc_reset();
 	crc = crc_calculate_block((u32 *) info_block,
 			(sizeof(*info_block) / 4) - 1);
 
 	if (crc != info_block->crc.info_block)
 		return false;
-#endif
+
 	crc_reset();
 	crc = crc_calculate_block((u32 *)&_ap_rom_start,
 			info_block->size / 4-1);
@@ -79,62 +78,6 @@ static bool stfub_firmware_is_valid(void)
 	/* force to dfu mode if previous line commented */
 	return false;
 }
-u32 stfub_firmware_crc(void)
-{
-	struct stfub_firmware_info *info_block;
-
-	info_block = (struct stfub_firmware_info *)&_if_rom_start;
-
-	return info_block->crc.firmware;
-}
-
-u32 stfub_info_calc_crc(void)
-{
-	u32 crc = 0;
-	crc_reset();
-	struct stfub_firmware_info *info_block;
-
-	info_block = (struct stfub_firmware_info *)&_if_rom_start;
-
-	crc_reset();
-	crc = crc_calculate_block((u32 *) info_block,
-			(sizeof(*info_block) / 4) - 1);
-	return crc;
-}
-u32 stfub_info_crc(void)
-{
-	struct stfub_firmware_info *info_block;
-
-	info_block = (struct stfub_firmware_info *)&_if_rom_start;
-
-	return info_block->crc.info_block;
-}
-
-u32 stfub_firmware_calc_crc(void)
-{
-	u32 crc = 0;
-	crc_reset();
-	struct stfub_firmware_info *info_block;
-
-	info_block = (struct stfub_firmware_info *)&_if_rom_start;
-
-	crc_reset();
-	crc = crc_calculate_block((u32 *)&_ap_rom_start,
-			(info_block->size ) / 4-1);
-
-	return crc;
-}
-
-u32 stfub_info_size(void)
-{
-	struct stfub_firmware_info *info_block;
-
-	info_block = (struct stfub_firmware_info *)&_if_rom_start;
-	return info_block->size;
-}
-
-
-
 
 	__attribute__ ((noreturn, interrupt))
 void stfub_ram_reset_handler(void)
@@ -159,16 +102,9 @@ void stfub_ram_reset_handler(void)
 
 
 void null_handler(void);
-volatile u32 cfg = 0;
 static void stfub_reset_start_clocks(void)
 {
-	cfg = RCC_CFGR;
-	if ( RCC_CFGR != 6865920 ) {
-		rcc_clock_setup_in_hsi_out_48mhz();
-	} else {
-		rcc_osc_on(PLL);
-		rcc_wait_for_osc_ready(PLL);
-	}
+	rcc_clock_setup_in_hsi_out_48mhz();
 	rcc_peripheral_enable_clock(&RCC_AHBENR, RCC_AHBENR_CRCEN);
 }
 
@@ -204,8 +140,8 @@ void stfub_rom_reset_handler(void)
 		*dest = *src;
 
 	stfub_reset_start_clocks();
-	scratchpad_is_valid	= false; //stfub_scratchpad_is_valid();
-	firmware_is_valid	= false;//stfub_firmware_is_valid();
+	scratchpad_is_valid	= stfub_scratchpad_is_valid();
+	firmware_is_valid	= stfub_firmware_is_valid();
 	stfub_reset_stop_clocks();
 
 	if ((scratchpad_is_valid && stfub_scratchpad_dfu_switch_requested())
