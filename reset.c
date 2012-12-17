@@ -40,6 +40,7 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/crc.h>
 #include <libopencm3/stm32/f1/rcc.h>
+#include <libopencm3/stm32/f1/flash.h>
 
 #include <libstfub/scratch.h>
 #include <libstfub/info_block.h>
@@ -164,12 +165,8 @@ bool stfub_exception_handlers_pages_are_protected(void)
 	struct option_bytes *obytes = (struct option_bytes *) &_op_rom_start;
 
 	/* FIXME: checking for 0 instead of 1 */
-#if 0
 	return (obytes->wrp0 & (FLASH_WRP_PAGE(0) | FLASH_WRP_PAGE(1))) ==
 		(FLASH_WRP_PAGE(0) | FLASH_WRP_PAGE(1));
-#else
-	return true;
-#endif
 }
 
 	__attribute__ ((section(".exception_handlers")))
@@ -178,15 +175,10 @@ bool stfub_bootloader_update_failed(void)
 	extern unsigned _op_rom_start;
 	struct option_bytes *obytes = (struct option_bytes *) &_op_rom_start;
 
-#if 0
 	return (obytes->data0 == ~obytes->ndata0) &&
 		(obytes->data1 == ~obytes->ndata1) &&
-		obytes->data0 == 0x42		  &&
-		obytes->data1 == 0x24;
-#else
-	return false;
-#endif
-
+		(obytes->data0 == 0x42)		  &&
+		(obytes->data1 == 0x24);
 }
 
 	__attribute__ ((section(".exception_handlers"), naked, interrupt))
